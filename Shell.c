@@ -19,6 +19,9 @@ extern char **environ;      /* defined in libc */
 char prompt[MAXPROMPT];     /* command line prompt */
 int verbose = 0;            /* if true, print additional output */
 char sbuf[MAXLINE];         /* for composing sprintf messages */
+char *tokenArray[128];
+char *tokenTypeArray[128];
+int tokenCount = 0;
 
 /*
  * main - The shell's main routine
@@ -29,7 +32,7 @@ int main(int argc, char **argv)
     char cmdline[MAXLINE];
     int emit_prompt = 1; /* emit prompt (default) */
 
-    strcpy(prompt, "psh> ");
+    strcpy(prompt, "iosh> ");
 
     /* Parse the command line */
     while ((c = getopt(argc, argv, "hvp")) != EOF) {
@@ -72,3 +75,45 @@ int main(int argc, char **argv)
     exit(0); /* control never reaches here */
 }
 
+
+int scanner(char* line) {
+
+	tokenCount = 0;
+
+	char newToken = "";
+	char newTokenType = "";
+	for (i=line; *i; i++) {
+		if (line[i] == " ") {
+			tokenArray[tokenCount] = *newToken;
+			tokenType[tokenCount] = "word";
+			tokenCount++;
+			newToken = "";
+			newTokenType = "";
+		}
+		else if (line[i] == "<") {
+			tokenArray[tokenCount] = *newToken;
+			tokenType[tokenCount] = "metachar";
+			tokenCount++;
+			newToken = "";
+			newTokenType = "";
+		}
+		else if (line[i] == "<") {
+
+		}
+		else if (line[i] == "#") {
+
+		}
+		else if (line[i] == '"') {
+			while (line[i] != '"') {
+				newToken
+			};
+		}
+		else if (line[i] == '\n') {
+
+		}
+		else {
+
+		}
+	}
+
+}

@@ -14,14 +14,19 @@
 #define MAXARGS     128   /* max args on a command line */
 #define MAXPROMPT   128   /* max size of a prompt string */
 
+struct token {
+	char tokenData[128];
+	char tokenType[30];
+};
+
 /* Global variables */
 extern char **environ;      /* defined in libc */
 char prompt[MAXPROMPT];     /* command line prompt */
 int verbose = 0;            /* if true, print additional output */
 char sbuf[MAXLINE];         /* for composing sprintf messages */
-char *tokenArray[128];
-char *tokenTypeArray[128];
 int tokenCount = 0;
+struct token tokenArray[128];
+
 
 /*
  * main - The shell's main routine
@@ -80,39 +85,130 @@ int scanner(char* line) {
 
 	tokenCount = 0;
 
-	char newToken = "";
-	char newTokenType = "";
+	struct token newToken;
 	for (i=line; *i; i++) {
 		if (line[i] == " ") {
-			tokenArray[tokenCount] = *newToken;
-			tokenType[tokenCount] = "word";
-			tokenCount++;
-			newToken = "";
-			newTokenType = "";
+			if (newToken.tokenData.size() > 0) {
+				strcat(newToken.tokenData, "\0");
+				tokenArray[tokenCount].tokenData = newToken.tokenData;
+				tokenArray[tokenCount].tokenType = "word";
+				newToken.tokenData = "";
+				newToken.tokenType = "";
+				tokenCount++;
+			}
 		}
 		else if (line[i] == "<") {
-			tokenArray[tokenCount] = *newToken;
-			tokenType[tokenCount] = "metachar";
+			if (newToken.tokenData.size() > 0) {
+				strcat(newToken.tokenData, "\0");
+				tokenArray[tokenCount].tokenData = newToken.tokenData;
+				tokenArray[tokenCount].tokenType = "word";
+				newToken.tokenData = "";
+				newToken.tokenType = "";
+				tokenCount++;
+			}
+			strcat(newToken.tokenData, "<\0");
+			tokenArray[tokenCount].tokenData = newToken.tokenData;
+			tokenArray[tokenCount].tokenType = "meta";
+			newToken.tokenData = "";
+			newToken.tokenType = "";
 			tokenCount++;
-			newToken = "";
-			newTokenType = "";
 		}
-		else if (line[i] == "<") {
-
+		else if (line[i] == ">") {
+			if (newToken.tokenData.size() > 0) {
+				strcat(newToken.tokenData, "\0");
+				tokenArray[tokenCount].tokenData = newToken.tokenData;
+				tokenArray[tokenCount].tokenType = "word";
+				newToken.tokenData = "";
+				newToken.tokenType = "";
+				tokenCount++;
+			}
+			strcat(newToken.tokenData, ">\0");
+			tokenArray[tokenCount].tokenData = newToken.tokenData;
+			tokenArray[tokenCount].tokenType = "meta";
+			newToken.tokenData = "";
+			newToken.tokenType = "";
+			tokenCount++;
 		}
 		else if (line[i] == "#") {
+			if (newToken.tokenData.size() > 0) {
+				strcat(newToken.tokenData, "\0");
+				tokenArray[tokenCount].tokenData = newToken.tokenData;
+				tokenArray[tokenCount].tokenType = "word";
+				newToken.tokenData = "";
+				newToken.tokenType = "";
+				tokenCount++;
+			}
+			strcat(newToken.tokenData, "#\0");
+			tokenArray[tokenCount].tokenData = newToken.tokenData;
+			tokenArray[tokenCount].tokenType = "meta";
+			newToken.tokenData = "";
+			newToken.tokenType = "";
+			tokenCount++;
 
 		}
 		else if (line[i] == '"') {
 			while (line[i] != '"') {
-				newToken
+				strcat(newToken.tokenData, line[i]);
+				i++;
 			};
+			tokenArray[tokenCount].tokenData = newToken.tokenData;
+			tokenArray[tokenCount].tokenType = "string";
+			newToken.tokenData = "";
+			newToken.tokenType = "";
+			tokenCount++;
 		}
 		else if (line[i] == '\n') {
+			if (!strcmp(newToken.tokenData, "quit")){
+				strcat(newToken.tokenData, "\0");
+				tokenArray[tokenCount].tokenData = newToken.tokenData;
+				tokenArray[tokenCount].tokenType = "quit";
+				newToken.tokenData = "";
+				newToken.tokenType = "";
+				tokenCount++;
+			}
+			else if (!strcmp(newToken.tokenData, "debug")) {
+				strcat(newToken.tokenData, "\0");
+				tokenArray[tokenCount].tokenData = newToken.tokenData;
+				tokenArray[tokenCount].tokenType = "debug";
+				newToken.tokenData = "";
+				newToken.tokenType = "";
+				tokenCount++;
+			}
+			else if (!strcmp(newToken.tokenData, "chdir")) {
+				strcat(newToken.tokenData, "\0");
+				tokenArray[tokenCount].tokenData = newToken.tokenData;
+				tokenArray[tokenCount].tokenType = "chdir";
+				newToken.tokenData = "";
+				newToken.tokenType = "";
+				tokenCount++;
+			}
+			else if (!strcmp(newToken.tokenData, "setprompt")) {
+				strcat(newToken.tokenData, "\0");
+				tokenArray[tokenCount].tokenData = newToken.tokenData;
+				tokenArray[tokenCount].tokenType = "setprompt";
+				newToken.tokenData = "";
+				newToken.tokenType = "";
+				tokenCount++;
+			}
+			else {
+				if (newToken.tokenData.size() > 0) {
+					strcat(newToken.tokenData, "\0");
+					tokenArray[tokenCount].tokenData = newToken.tokenData;
+					tokenArray[tokenCount].tokenType = "word";
+					newToken.tokenData = "";
+					newToken.tokenType = "";
+					tokenCount++;
+				}
 
+			}
+			tokenArray[tokenCount].tokenData = newToken.tokenData;
+			tokenArray[tokenCount].tokenType = "EOL";
+			newToken.tokenData = "";
+			newToken.tokenType = "";
+			tokenCount++;
 		}
 		else {
-
+			strcat(newToken.tokenData, line[i]);
 		}
 	}
 

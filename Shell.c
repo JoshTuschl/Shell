@@ -15,8 +15,8 @@
 #define MAXPROMPT   128   /* max size of a prompt string */
 
 struct token {
-	char* tokenData;
-	char* tokenType;
+	char tokenData[128];
+	char tokenType[128];
 };
 
 /* Global variables */
@@ -96,133 +96,130 @@ int main(int argc, char **argv)
 int scanner(const char* cmdline) {
 
 	tokenCount = 0;
-	struct token newToken;
+	char tokenData[128];
+	memset(tokenData, 0, sizeof(tokenData));
 
 	int i;
 	for (i=0; i < strlen(cmdline); i++) {
 		if (cmdline[i] == ' ') {
-			if (strlen(newToken.tokenData) > 0) {
-				strcat(newToken.tokenData, "\0");
-				tokenArray[tokenCount].tokenData = newToken.tokenData;
-				tokenArray[tokenCount].tokenType = "word";
-				newToken.tokenData = "";
-				newToken.tokenType = "";
+			if (strlen(tokenData) > 0) {
+				strcat(tokenData, "\0");
+				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+				strcpy(tokenArray[tokenCount].tokenType,"word");
+				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
 		}
 		else if (cmdline[i] == '<') {
-			if (strlen(newToken.tokenData) > 0) {
-				strcat(newToken.tokenData, "\0");
-				tokenArray[tokenCount].tokenData = newToken.tokenData;
-				tokenArray[tokenCount].tokenType = "word";
-				newToken.tokenData = "";
-				newToken.tokenType = "";
+			if (strlen(tokenData) > 0) {
+				strcat(tokenData, "\0");
+				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+				strcpy(tokenArray[tokenCount].tokenType,"word");
+				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
-			strcat(newToken.tokenData, "<\0");
-			tokenArray[tokenCount].tokenData = newToken.tokenData;
-			tokenArray[tokenCount].tokenType = "meta";
-			newToken.tokenData = "";
-			newToken.tokenType = "";
+			strcat(tokenData, "<\0");
+			memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+			strcpy(tokenArray[tokenCount].tokenType,"meta");
+			memset(tokenData, 0, sizeof(tokenData));
 			tokenCount++;
 		}
 		else if (cmdline[i] == '>') {
-			if (strlen(newToken.tokenData) > 0) {
-				strcat(newToken.tokenData, "\0");
-				tokenArray[tokenCount].tokenData = newToken.tokenData;
-				tokenArray[tokenCount].tokenType = "word";
-				newToken.tokenData = "";
-				newToken.tokenType = "";
+			if (strlen(tokenData) > 0) {
+				strcat(tokenData, "\0");
+				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+				strcpy(tokenArray[tokenCount].tokenType,"word");
+				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
-			strcat(newToken.tokenData, ">\0");
-			tokenArray[tokenCount].tokenData = newToken.tokenData;
-			tokenArray[tokenCount].tokenType = "meta";
-			newToken.tokenData = "";
-			newToken.tokenType = "";
+			strcat(tokenData, ">\0");
+			memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+			strcpy(tokenArray[tokenCount].tokenType,"meta");
+			memset(tokenData, 0, sizeof(tokenData));
 			tokenCount++;
 		}
 		else if (cmdline[i] == '#') {
-			if (strlen(newToken.tokenData) > 0) {
-				strcat(newToken.tokenData, "\0");
-				tokenArray[tokenCount].tokenData = newToken.tokenData;
-				tokenArray[tokenCount].tokenType = "word";
-				newToken.tokenData = "";
-				newToken.tokenType = "";
+			if (strlen(tokenData) > 0) {
+				strcat(tokenData, "\0");
+				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+				strcpy(tokenArray[tokenCount].tokenType,"word");
+				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
-			strcat(newToken.tokenData, "#\0");
-			tokenArray[tokenCount].tokenData = newToken.tokenData;
-			tokenArray[tokenCount].tokenType = "meta";
-			newToken.tokenData = "";
-			newToken.tokenType = "";
+			strcat(tokenData, "#\0");
+			memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+			strcpy(tokenArray[tokenCount].tokenType,"meta");
+			memset(tokenData, 0, sizeof(tokenData));
 			tokenCount++;
 
 		}
 		else if (cmdline[i] == '"') {
-			while (cmdline[i] == '"') {
-				strcat(newToken.tokenData, &cmdline[i]);
+			tokenData[0] = cmdline[i+1];
+			i++;
+			i++;
+			while (cmdline[i] != '"') {
+				int index = strlen(tokenData);
+				tokenData[index] = cmdline[i];
 				i++;
 			};
-			tokenArray[tokenCount].tokenData = newToken.tokenData;
-			tokenArray[tokenCount].tokenType = "string";
-			newToken.tokenData = "";
-			newToken.tokenType = "";
+			memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+			strcpy(tokenArray[tokenCount].tokenType,"string");
+			memset(tokenData, 0, sizeof(tokenData));
 			tokenCount++;
 		}
 		else if (cmdline[i] == '\n') {
-			if (strcmp(newToken.tokenData,"quit")){
-				strcat(newToken.tokenData, "\0");
-				tokenArray[tokenCount].tokenData = newToken.tokenData;
-				tokenArray[tokenCount].tokenType = "quit";
-				newToken.tokenData = "";
-				newToken.tokenType = "";
+			if (!strcmp(tokenData,"quit")){
+				strcat(tokenData, "\0");
+				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+				//tokenArray[tokenCount].tokenData = tokenData;
+				strcpy(tokenArray[tokenCount].tokenType,"quit");
+				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
-			else if (strcmp(newToken.tokenData,"debug")) {
-				strcat(newToken.tokenData, "\0");
-				tokenArray[tokenCount].tokenData = newToken.tokenData;
-				tokenArray[tokenCount].tokenType = "debug";
-				newToken.tokenData = "";
-				newToken.tokenType = "";
+			else if (!strcmp(tokenData,"debug")) {
+				strcat(tokenData, "\0");
+				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+				strcpy(tokenArray[tokenCount].tokenType,"debug");
+				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
-			else if (strcmp(newToken.tokenData,"chdir")) {
-				strcat(newToken.tokenData, "\0");
-				tokenArray[tokenCount].tokenData = newToken.tokenData;
-				tokenArray[tokenCount].tokenType = "chdir";
-				newToken.tokenData = "";
-				newToken.tokenType = "";
+			else if (!strcmp(tokenData,"chdir")) {
+				strcat(tokenData, "\0");
+				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+				strcpy(tokenArray[tokenCount].tokenType,"chdir");
+				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
-			else if (strcmp(newToken.tokenData,"setprompt")) {
-				strcat(newToken.tokenData, "\0");
-				tokenArray[tokenCount].tokenData = newToken.tokenData;
-				tokenArray[tokenCount].tokenType = "setprompt";
-				newToken.tokenData = "";
-				newToken.tokenType = "";
+			else if (!strcmp(tokenData,"setprompt")) {
+				strcat(tokenData, "\0");
+				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+				strcpy(tokenArray[tokenCount].tokenType,"setprompt");
+				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
 			else {
-				if (strlen(newToken.tokenData) > 0) {
-					strcat(newToken.tokenData, "\0");
-					tokenArray[tokenCount].tokenData = newToken.tokenData;
-					tokenArray[tokenCount].tokenType = "word";
-					newToken.tokenData = "";
-					newToken.tokenType = "";
+				if (strlen(tokenData) > 0) {
+					strcat(tokenData, "\0");
+					memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+					strcpy(tokenArray[tokenCount].tokenType,"word");
+					memset(tokenData, 0, sizeof(tokenData));
 					tokenCount++;
 				}
 
 			}
-			tokenArray[tokenCount].tokenData = newToken.tokenData;
-			tokenArray[tokenCount].tokenType = "EOL";
-			newToken.tokenData = "";
-			newToken.tokenType = "";
+			memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
+			strcpy(tokenArray[tokenCount].tokenType,"EOL");
+			memset(tokenData, 0, sizeof(tokenData));
 			tokenCount++;
 		}
 		else {
-			const char* character = &cmdline[i];
-			strcat(newToken.tokenData, character);
+			int index = strlen(tokenData);
+			if (tokenData[0] != '\0'){
+				tokenData[index] = cmdline[i];
+			}
+			else {
+				tokenData[0] = cmdline[i];
+			}
 		}
 	}
 }
@@ -230,9 +227,8 @@ int scanner(const char* cmdline) {
 void printTokens() {
 	int i;
 	for (i = 0; i < tokenCount; i++) {
-		struct token curr = tokenArray[i];
-		printf("Token is %s ", curr.tokenData);
-		printf("Token type is %s\n", curr.tokenType);
+		printf("Token is %s ", (tokenArray[i]).tokenData);
+		printf("Token type is %s\n", (tokenArray[i]).tokenType);
 	}
 }
 

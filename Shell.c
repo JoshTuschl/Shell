@@ -17,6 +17,7 @@
 struct token {
 	char tokenData[128];
 	char tokenType[128];
+	char usage[128];
 };
 
 /* Global variables */
@@ -318,3 +319,16 @@ void execution_error(char *msg)
 	exit(1);
 }
 
+int lookUp(char x)
+{
+	int found = -1;
+	int i;
+	for(i=0; i<tokenCount; i++)
+	{
+		if(tokenArray[i].tokenData == x)
+		{
+			found = i;
+		}
+	}
+	return found;
+}

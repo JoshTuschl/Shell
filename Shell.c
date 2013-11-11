@@ -15,8 +15,8 @@
 #define MAXPROMPT   128   /* max size of a prompt string */
 
 struct token {
-	char tokenData[128];
-	char tokenType[30];
+	char* tokenData;
+	char* tokenType;
 };
 
 /* Global variables */
@@ -24,8 +24,16 @@ extern char **environ;      /* defined in libc */
 char prompt[MAXPROMPT];     /* command line prompt */
 int verbose = 0;            /* if true, print additional output */
 char sbuf[MAXLINE];         /* for composing sprintf messages */
+int debug = 0;
 int tokenCount = 0;
 struct token tokenArray[128];
+
+//stubs
+
+void printTokens();
+void helpMessage(void);
+void system_error(char*);
+void execution_error(char*);
 
 
 /*
@@ -35,7 +43,7 @@ int main(int argc, char **argv)
 {
     char c;
     char cmdline[MAXLINE];
-    int emit_prompt = 1; /* emit prompt (default) */
+    int enable_prompt = 1;
 
     strcpy(prompt, "iosh> ");
 
@@ -43,52 +51,57 @@ int main(int argc, char **argv)
     while ((c = getopt(argc, argv, "hvp")) != EOF) {
         switch (c) {
         case 'h':             /* print help message */
-            usage();
-	    break;
+            helpMessage();
+            break;
         case 'v':             /* emit additional diagnostic info */
             verbose = 1;
-	    break;
+            break;
         case 'p':             /* don't print a prompt */
-            emit_prompt = 0;  /* handy for automatic testing */
-	    break;
-	default:
-            usage();
-	}
+            enable_prompt = 0;  /* handy for automatic testing */
+            break;
+        default:
+            helpMessage();
+        }
     }
 
     /* Execute the shell's read/eval loop */
     while (1) {
 
-	/* Read command line */
-	if (emit_prompt) {
-	    printf("%s", prompt);
-	    fflush(stdout);
-	}
-	if ((fgets(cmdline, MAXLINE, stdin) == NULL) && ferror(stdin))
-	    app_error("fgets error");
-	if (feof(stdin)) { /* End of file (ctrl-d) */
-	    fflush(stdout);
-	    exit(0);
-	}
+		/* Read command line */
+		if (enable_prompt) {
+			printf("%s", prompt);
+			fflush(stdout);
+		}
 
-	/* Evaluate the command line */
-	eval(cmdline);
-	fflush(stdout);
-	fflush(stdout);
-    }
+		if ((fgets(cmdline, MAXLINE, stdin) == NULL) && ferror(stdin))
+			execution_error("fgets error");
 
-    exit(0); /* control never reaches here */
+		if (feof(stdin)) { /* End of file (ctrl-d) */
+			fflush(stdout);
+			exit(0);
+		}
+
+		/* Evaluate the command line */
+		scanner(cmdline);
+		printTokens();
+		//eval(cmdline);
+		fflush(stdout);
+		fflush(stdout);
+		}
+
+		exit(0); /* control never reaches here */
 }
 
 
-int scanner(char* line) {
+int scanner(const char* cmdline) {
 
 	tokenCount = 0;
-
 	struct token newToken;
-	for (i=line; *i; i++) {
-		if (line[i] == " ") {
-			if (newToken.tokenData.size() > 0) {
+
+	int i;
+	for (i=0; i < strlen(cmdline); i++) {
+		if (cmdline[i] == ' ') {
+			if (strlen(newToken.tokenData) > 0) {
 				strcat(newToken.tokenData, "\0");
 				tokenArray[tokenCount].tokenData = newToken.tokenData;
 				tokenArray[tokenCount].tokenType = "word";
@@ -97,8 +110,8 @@ int scanner(char* line) {
 				tokenCount++;
 			}
 		}
-		else if (line[i] == "<") {
-			if (newToken.tokenData.size() > 0) {
+		else if (cmdline[i] == '<') {
+			if (strlen(newToken.tokenData) > 0) {
 				strcat(newToken.tokenData, "\0");
 				tokenArray[tokenCount].tokenData = newToken.tokenData;
 				tokenArray[tokenCount].tokenType = "word";
@@ -113,8 +126,8 @@ int scanner(char* line) {
 			newToken.tokenType = "";
 			tokenCount++;
 		}
-		else if (line[i] == ">") {
-			if (newToken.tokenData.size() > 0) {
+		else if (cmdline[i] == '>') {
+			if (strlen(newToken.tokenData) > 0) {
 				strcat(newToken.tokenData, "\0");
 				tokenArray[tokenCount].tokenData = newToken.tokenData;
 				tokenArray[tokenCount].tokenType = "word";
@@ -129,8 +142,8 @@ int scanner(char* line) {
 			newToken.tokenType = "";
 			tokenCount++;
 		}
-		else if (line[i] == "#") {
-			if (newToken.tokenData.size() > 0) {
+		else if (cmdline[i] == '#') {
+			if (strlen(newToken.tokenData) > 0) {
 				strcat(newToken.tokenData, "\0");
 				tokenArray[tokenCount].tokenData = newToken.tokenData;
 				tokenArray[tokenCount].tokenType = "word";
@@ -146,9 +159,9 @@ int scanner(char* line) {
 			tokenCount++;
 
 		}
-		else if (line[i] == '"') {
-			while (line[i] != '"') {
-				strcat(newToken.tokenData, line[i]);
+		else if (cmdline[i] == '"') {
+			while (cmdline[i] == '"') {
+				strcat(newToken.tokenData, &cmdline[i]);
 				i++;
 			};
 			tokenArray[tokenCount].tokenData = newToken.tokenData;
@@ -157,8 +170,8 @@ int scanner(char* line) {
 			newToken.tokenType = "";
 			tokenCount++;
 		}
-		else if (line[i] == '\n') {
-			if (!strcmp(newToken.tokenData, "quit")){
+		else if (cmdline[i] == '\n') {
+			if (strcmp(newToken.tokenData,"quit")){
 				strcat(newToken.tokenData, "\0");
 				tokenArray[tokenCount].tokenData = newToken.tokenData;
 				tokenArray[tokenCount].tokenType = "quit";
@@ -166,7 +179,7 @@ int scanner(char* line) {
 				newToken.tokenType = "";
 				tokenCount++;
 			}
-			else if (!strcmp(newToken.tokenData, "debug")) {
+			else if (strcmp(newToken.tokenData,"debug")) {
 				strcat(newToken.tokenData, "\0");
 				tokenArray[tokenCount].tokenData = newToken.tokenData;
 				tokenArray[tokenCount].tokenType = "debug";
@@ -174,7 +187,7 @@ int scanner(char* line) {
 				newToken.tokenType = "";
 				tokenCount++;
 			}
-			else if (!strcmp(newToken.tokenData, "chdir")) {
+			else if (strcmp(newToken.tokenData,"chdir")) {
 				strcat(newToken.tokenData, "\0");
 				tokenArray[tokenCount].tokenData = newToken.tokenData;
 				tokenArray[tokenCount].tokenType = "chdir";
@@ -182,7 +195,7 @@ int scanner(char* line) {
 				newToken.tokenType = "";
 				tokenCount++;
 			}
-			else if (!strcmp(newToken.tokenData, "setprompt")) {
+			else if (strcmp(newToken.tokenData,"setprompt")) {
 				strcat(newToken.tokenData, "\0");
 				tokenArray[tokenCount].tokenData = newToken.tokenData;
 				tokenArray[tokenCount].tokenType = "setprompt";
@@ -191,7 +204,7 @@ int scanner(char* line) {
 				tokenCount++;
 			}
 			else {
-				if (newToken.tokenData.size() > 0) {
+				if (strlen(newToken.tokenData) > 0) {
 					strcat(newToken.tokenData, "\0");
 					tokenArray[tokenCount].tokenData = newToken.tokenData;
 					tokenArray[tokenCount].tokenType = "word";
@@ -208,8 +221,42 @@ int scanner(char* line) {
 			tokenCount++;
 		}
 		else {
-			strcat(newToken.tokenData, line[i]);
+			const char* character = &cmdline[i];
+			strcat(newToken.tokenData, character);
 		}
 	}
-
 }
+
+void printTokens() {
+	int i;
+	for (i = 0; i < tokenCount; i++) {
+		struct token curr = tokenArray[i];
+		printf("Token is %s ", curr.tokenData);
+		printf("Token type is %s\n", curr.tokenType);
+	}
+}
+
+
+void helpMessage(void)
+{
+	printf("Usage: shell [-hvp]\n");
+	printf("   -h   print help message\n");
+	printf("   -v   verbose printing enabled\n");
+	printf("   -p   command prompt off\n");
+	exit(1);
+}
+
+
+void system_error(char *msg)
+{
+	fprintf(stdout, "%s: %s\n", msg, strerror(errno));
+	exit(1);
+}
+
+
+void execution_error(char *msg)
+{
+	fprintf(stdout, "%s\n", msg);
+	exit(1);
+}
+

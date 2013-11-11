@@ -84,7 +84,6 @@ int main(int argc, char **argv)
 		/* Evaluate the command line */
 		scanner(cmdline);
 		printTokens();
-		//eval(cmdline);
 		fflush(stdout);
 		fflush(stdout);
 		}
@@ -280,6 +279,14 @@ int scanner(const char* cmdline) {
 	}
 }
 
+void setPrompt(char string) {
+	strcpy(prompt, string);
+}
+
+void setDebug(int value) {
+	debug = value;
+}
+
 void printTokens() {
 	int i;
 	for (i = 0; i < tokenCount; i++) {
@@ -287,7 +294,6 @@ void printTokens() {
 		printf("Token type is %s\n", (tokenArray[i]).tokenType);
 	}
 }
-
 
 void helpMessage(void)
 {

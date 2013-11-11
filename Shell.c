@@ -105,7 +105,21 @@ int scanner(const char* cmdline) {
 			if (strlen(tokenData) > 0) {
 				strcat(tokenData, "\0");
 				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
-				strcpy(tokenArray[tokenCount].tokenType,"word");
+				if (!strcmp(tokenData,"quit")){
+					strcpy(tokenArray[tokenCount].tokenType,"quit");
+				}
+				else if (!strcmp(tokenData,"debug")) {
+					strcpy(tokenArray[tokenCount].tokenType,"debug");
+				}
+				else if (!strcmp(tokenData,"chdir")) {
+					strcpy(tokenArray[tokenCount].tokenType,"chdir");
+				}
+				else if (!strcmp(tokenData,"setprompt")) {
+					strcpy(tokenArray[tokenCount].tokenType,"setprompt");
+				}
+				else {
+					strcpy(tokenArray[tokenCount].tokenType,"word");
+				}
 				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
@@ -114,7 +128,21 @@ int scanner(const char* cmdline) {
 			if (strlen(tokenData) > 0) {
 				strcat(tokenData, "\0");
 				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
-				strcpy(tokenArray[tokenCount].tokenType,"word");
+				if (!strcmp(tokenData,"quit")){
+					strcpy(tokenArray[tokenCount].tokenType,"quit");
+				}
+				else if (!strcmp(tokenData,"debug")) {
+					strcpy(tokenArray[tokenCount].tokenType,"debug");
+				}
+				else if (!strcmp(tokenData,"chdir")) {
+					strcpy(tokenArray[tokenCount].tokenType,"chdir");
+				}
+				else if (!strcmp(tokenData,"setprompt")) {
+					strcpy(tokenArray[tokenCount].tokenType,"setprompt");
+				}
+				else {
+					strcpy(tokenArray[tokenCount].tokenType,"word");
+				}
 				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
@@ -128,7 +156,21 @@ int scanner(const char* cmdline) {
 			if (strlen(tokenData) > 0) {
 				strcat(tokenData, "\0");
 				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
-				strcpy(tokenArray[tokenCount].tokenType,"word");
+				if (!strcmp(tokenData,"quit")){
+					strcpy(tokenArray[tokenCount].tokenType,"quit");
+				}
+				else if (!strcmp(tokenData,"debug")) {
+					strcpy(tokenArray[tokenCount].tokenType,"debug");
+				}
+				else if (!strcmp(tokenData,"chdir")) {
+					strcpy(tokenArray[tokenCount].tokenType,"chdir");
+				}
+				else if (!strcmp(tokenData,"setprompt")) {
+					strcpy(tokenArray[tokenCount].tokenType,"setprompt");
+				}
+				else {
+					strcpy(tokenArray[tokenCount].tokenType,"word");
+				}
 				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
@@ -142,7 +184,21 @@ int scanner(const char* cmdline) {
 			if (strlen(tokenData) > 0) {
 				strcat(tokenData, "\0");
 				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
-				strcpy(tokenArray[tokenCount].tokenType,"word");
+				if (!strcmp(tokenData,"quit")){
+					strcpy(tokenArray[tokenCount].tokenType,"quit");
+				}
+				else if (!strcmp(tokenData,"debug")) {
+					strcpy(tokenArray[tokenCount].tokenType,"debug");
+				}
+				else if (!strcmp(tokenData,"chdir")) {
+					strcpy(tokenArray[tokenCount].tokenType,"chdir");
+				}
+				else if (!strcmp(tokenData,"setprompt")) {
+					strcpy(tokenArray[tokenCount].tokenType,"setprompt");
+				}
+				else {
+					strcpy(tokenArray[tokenCount].tokenType,"word");
+				}
 				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}

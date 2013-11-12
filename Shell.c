@@ -1,12 +1,15 @@
+#include <ctype.h>
+#include <errno.h>
+#include <getopt.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <ctype.h>
-#include <signal.h>
+#include <sys/errno.h>
 #include <sys/types.h>
+#include <sys/unistd.h>
 #include <sys/wait.h>
-#include <errno.h>
+#include <unistd.h>
 
 
 /* Misc manifest constants */
@@ -33,8 +36,11 @@ struct token tokenArray[128];
 
 void printTokens();
 void helpMessage(void);
-void system_error(char*);
-void execution_error(char*);
+void systemError(char*);
+void executionError(char*);
+void writeFile(char*, char*);
+char* readFile(char*);
+int lookUp(char);
 
 
 /*
@@ -75,7 +81,7 @@ int main(int argc, char **argv)
 		}
 
 		if ((fgets(cmdline, MAXLINE, stdin) == NULL) && ferror(stdin))
-			execution_error("fgets error");
+			executionError("fgets error");
 
 		if (feof(stdin)) { /* End of file (ctrl-d) */
 			fflush(stdout);
@@ -280,7 +286,7 @@ int scanner(const char* cmdline) {
 	}
 }
 
-void setPrompt(char string) {
+void setPrompt(char* string) {
 	strcpy(prompt, string);
 }
 
@@ -306,14 +312,14 @@ void helpMessage(void)
 }
 
 
-void system_error(char *msg)
+void systemError(char *msg)
 {
 	fprintf(stdout, "%s: %s\n", msg, strerror(errno));
 	exit(1);
 }
 
 
-void execution_error(char *msg)
+void executionError(char *msg)
 {
 	fprintf(stdout, "%s\n", msg);
 	exit(1);
@@ -325,10 +331,61 @@ int lookUp(char x)
 	int i;
 	for(i=0; i<tokenCount; i++)
 	{
-		if(tokenArray[i].tokenData == x)
+		if(tokenArray[i].tokenData[0] == x)
 		{
 			found = i;
 		}
 	}
 	return found;
 }
+
+void writeFile(char* fileName, char* output) {
+
+	FILE *filePtr;
+	filePtr = fopen(fileName, "w");
+
+	if (filePtr == NULL) {
+	  fprintf(stderr, "Can't write output file %s!\n", fileName);
+	  exit(1);
+	}
+
+	else {
+		fwrite (output , sizeof(output), 1, filePtr);
+		fclose(filePtr);
+	}
+
+	return;
+
+}
+
+char* readFile(char* fileName) {
+	char* fileContents;
+
+	FILE *filePtr;
+	int fileSize;
+	filePtr = fopen(fileName, "r");
+
+	if (filePtr == NULL) {
+	  fprintf(stderr, "Can't open input file %s!\n", fileName);
+	  exit(1);
+	}
+
+	//file is good
+	else {
+		//read to end of file
+		fseek(filePtr, 0, SEEK_END);
+		//find length of file
+		fileSize = ftell(filePtr);
+		//move file pointer back to beginning
+		rewind(filePtr);
+
+		//allocate new char *
+		fileContents = (char*) malloc(sizeof(char) * fileSize);
+		//read contents of file
+		fread(fileContents, 1, fileSize, filePtr);
+		fclose(filePtr);
+	}
+
+	return fileContents;
+}
+

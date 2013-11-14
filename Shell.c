@@ -31,14 +31,13 @@ int tokenCount = 0;
 struct token tokenArray[128];
 
 //stubs
-
 void printTokens();
 void systemError(char*);
 void executionError(char*);
 void writeFile(char*, char*);
 char* readFile(char*);
 int lookUp(char);
-
+void parser();
 
 /*
  * main - The shell's main routine
@@ -349,7 +348,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				{
 					strcpy(tokenArray[i].usage, "cmd");
 					strcpy(tokenArray[i+1].usage, "arg");
-					if(strcmpy(tokenArray[i+1].tokenData, "on") == 0)  //check if debug is being turned on
+					if(strcmp(tokenArray[i+1].tokenData, "on") == 0)  //check if debug is being turned on
 					{
 						//enter debug mode
 						debug = 1;
@@ -360,7 +359,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					}
 					else
 					{
-						executionError("Invalid argument for debug cmg.");
+						executionError("Invalid argument for debug cmd.");
 					}
 				}
 				else if(strcmp(tokenArray[i].tokenType, "chdir") == 0) //check if token is built-in function change directory
@@ -555,9 +554,9 @@ void setDebug(int value) {
 void printTokens() {
 	int i;
 	for (i = 0; i < tokenCount; i++) {
-		printf("Token is %s ", (tokenArray[i]).tokenData);
+		printf("Token is %s \n", (tokenArray[i]).tokenData);
 		printf("Token type is %s\n", (tokenArray[i]).tokenType);
-		printf("Token usage is %s\n", (tokenArray[i]).usage);
+		printf("Token usage is %s\n\n", (tokenArray[i]).usage);
 	}
 }
 

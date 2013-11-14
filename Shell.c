@@ -310,7 +310,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 			outfile = meta_char + 1;
 			if(outfile < infile)
 			{
-				execution_error("infile direction (<) must come before outfile direction (>)");
+				executionError("infile direction (<) must come before outfile direction (>)");
 			}
 			else
 			{
@@ -349,18 +349,18 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				{
 					strcpy(tokenArray[i].usage, "cmd");
 					strcpy(tokenArray[i+1].usage, "arg");
-					if(strcmpy(tokenArray[i+1].tokenType, "on") == 0)  //check if debug is being turned on
+					if(strcmpy(tokenArray[i+1].tokenData, "on") == 0)  //check if debug is being turned on
 					{
 						//enter debug mode
 						debug = 1;
 					}
-					else if(strcmp(tokenArray[i+1].tokenType, "off") == 0)   //check if debug is being turned off
+					else if(strcmp(tokenArray[i+1].tokenData, "off") == 0)   //check if debug is being turned off
 					{	//exit debug mode
 						debug = 0;
 					}
 					else
 					{
-						execution_error("Invalid argument for debug cmg.");
+						executionError("Invalid argument for debug cmg.");
 					}
 				}
 				else if(strcmp(tokenArray[i].tokenType, "chdir") == 0) //check if token is built-in function change directory

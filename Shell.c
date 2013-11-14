@@ -10,7 +10,6 @@
 #include <sys/unistd.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include "csapp.h"
 
 /* Misc manifest constants */
 #define MAXLINE    1024   /* max line size */
@@ -341,7 +340,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 		int i;
 		for(i=0; i<tokenCount; i++)  //check each token
 		{ 
-			if(tokenArray[i].tokenType == '#')  //check for comment symbol
+			if(strcmp(tokenArray[i].tokenType, "#") == 0)  //check for comment symbol
 			{
 				strcpy(tokenArray[i].usage, "meta");
 				int j;
@@ -389,7 +388,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					strcpy(tokenArray[i].usage, "cmd");
 					strcpy(tokenArray[i+1].usage, "directory_name");
 					//change directory
-					system.cd(tokenArray[i+1].tokenData);
+					chdir(tokenArray[i+1].tokenData);
 				}
 				else if(strcmp(tokenArray[i].tokenType, "quit") == 0) //check if token is quit
 				{
@@ -406,8 +405,8 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					int k;
 					for(k = 0; k<strlen(tokenArray[i].tokenData); k++)
 					{
-						//if(tokenArray[i].tokenData[k] == '/')
-						if(S_ISREG(tokenArray[i].tokenData.st_mode))
+						if(tokenArray[i].tokenData[k] == '/')
+						//if(S_ISREG(tokenArray[i].tokenData.st_mode))
 						{
 							strcpy(tokenArray[i].usage, "directory_name");
 						}
@@ -437,9 +436,10 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				printf(tokenArray.Data + " is " + tokenArray.usage + "\n");
 			}*/
 
-
-			char array argv[tokenCount-1];
+			int pid;
+			char argv[tokenCount-1];
 			int argc = 0;
+			char buf[254];
 			int l;
 			int c = 0;
 			char* file;
@@ -450,38 +450,48 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				if(outfile != -1)
 				{
 					//there is both infile and outfile
+					char out[255];
 					if(fork() == 0) {
-						file = dup2(infile)
-						strcpy(argv[argc], readfile(file));
+						file = dup2(infile, 1);
+						strcpy(argv[argc], readfile(tokenArray[infile].tokenData));
 						argc++;
 						for(l=0; l<tokenCount; l++)
 						{
 							if(strcmp(tokenArray[i].usage, "arg") == 0)
 							{
 								strcpy(argv[argc], tokenArray[i].tokenData);
-								argc++
+								argc++;
 							}
 							else if(strcm(tokenArray[i].usage, "cmd") == 0)
 							{
 								c = i;
 							}
+							else if(strcmp(tokenArray[l].usage, "outfile") == 0)
+							{
+								strcpy(buf, tokenArray[l].tokenData);
+							}
 						}
-						exec(tokenArray[c], argv);
+						if(out = execve(tokenArray[c].tokenData, argv, environ) < 0 )
+						{
+							printf("%s: Command not found. \n", tokenArray[c].tokenData);
+							exit(0);
+						}
+						writeFile(buf, out);
 					}
 				}
 				else    //there is only infile
 				{
 					if((pid = fork()) == 0) {
-						file = dup2(infile)
+						file = dup2(infile, 1);
 
-						strcpy(argv[argc], readfile(file));
+						strcpy(argv[argc], readfile(tokenArray[infile].tokenData));
 						argc++;
 						for(l=0; l<tokenCount; l++)
 						{
 							if(strcmp(tokenArray[i].usage, "arg") == 0)
 							{
 								strcpy(argv[argc], tokenArray[i].tokenData);
-								argc++
+								argc++;
 							}
 							else if(strcmp(tokenArray[i].usage, "cmd") == 0)
 							{
@@ -505,7 +515,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 							if(strcmp(tokenArray[l].usage, "arg") == 0)
 							{
 								strcpy(argv[argc], tokenArray[l].tokenData);
-								argc++
+								argc++;
 							}
 							else if(strcmp(tokenArray[l].usage, "cmd") == 0)
 							{
@@ -516,19 +526,31 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 								strcpy(buf, tokenArray[l].tokenData);
 							}
 						}
-						if(out = execve(tokenArray[c], argv, environ) < 0 )
+						if(out = execve(tokenArray[c].tokenData, argv, environ) < 0 )
 						{
 							printf("%s: Command not found. \n", tokenArray[c].tokenData);
 							exit(0);
 						}
-						writeFile(outFile, out);
+						writeFile(buf, out);
 					}
 				}
 				else
 				{
 					//there is not an infile or an outfile
+					for(l=0; l<tokenCount; l++)
+					{
+						if(strcmp(tokenArray[l].usage, "arg") == 0)
+						{
+							strcpy(argv[argc], tokenArray[l].tokenData);
+							argc++;
+						}
+						else if(strcmp(tokenArray[l].usage, "cmd") == 0)
+						{
+							c = i;
+						}
+					}
 					if((pid = fork()) == 0) {
-						if(execve(tokenArray[0].tokenData, cmdline, environ) < 0) {
+						if(execve(tokenArray[0].tokenData, argv, environ) < 0) {
 							printf("%s: Command not found. \n", tokenArray[0].tokenData);
 							exit(0);
 						}

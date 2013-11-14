@@ -1,15 +1,16 @@
-#include <ctype.h>
-#include <errno.h>
+//#include <ctype.h>
+//#include <errno.h>
 #include <getopt.h>
-#include <signal.h>
+//#include <signal.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/errno.h>
-#include <sys/types.h>
+//#include <sys/types.h>
 #include <sys/unistd.h>
-#include <sys/wait.h>
-#include <unistd.h>
+//#include <sys/wait.h>
+//#include <unistd.h>
 
 /* Misc manifest constants */
 #define MAXLINE    1024   /* max line size */
@@ -34,7 +35,6 @@ struct token tokenArray[128];
 //stubs
 
 void printTokens();
-void helpMessage(void);
 void systemError(char*);
 void executionError(char*);
 void writeFile(char*, char*);
@@ -53,31 +53,11 @@ int main(int argc, char **argv)
 
     strcpy(prompt, "iosh> ");
 
-    /* Parse the command line */
-    while ((c = getopt(argc, argv, "hvp")) != EOF) {
-        switch (c) {
-        case 'h':             /* print help message */
-            helpMessage();
-            break;
-        case 'v':             /* emit additional diagnostic info */
-            verbose = 1;
-            break;
-        case 'p':             /* don't print a prompt */
-            enable_prompt = 0;  /* handy for automatic testing */
-            break;
-        default:
-            helpMessage();
-        }
-    }
-
     /* Execute the shell's read/eval loop */
     while (1) {
 
-		/* Read command line */
-		if (enable_prompt) {
-			printf("%s", prompt);
-			fflush(stdout);
-		}
+		printf("%s", prompt);
+		fflush(stdout);
 
 		if ((fgets(cmdline, MAXLINE, stdin) == NULL) && ferror(stdin))
 			executionError("fgets error");
@@ -89,10 +69,13 @@ int main(int argc, char **argv)
 
 		/* Evaluate the command line */
 		scanner(cmdline);
-		printTokens();
+
 		fflush(stdout);
 		fflush(stdout);
+		if (debug == 1) {
+			printTokens();
 		}
+	}
 
 		exit(0); /* control never reaches here */
 }
@@ -284,6 +267,7 @@ int scanner(const char* cmdline) {
 			}
 		}
 	}
+	return 1;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -577,18 +561,9 @@ void printTokens() {
 	for (i = 0; i < tokenCount; i++) {
 		printf("Token is %s ", (tokenArray[i]).tokenData);
 		printf("Token type is %s\n", (tokenArray[i]).tokenType);
+		printf("Token usage is %s\n", (tokenArray[i]).usage);
 	}
 }
-
-void helpMessage(void)
-{
-	printf("Usage: shell [-hvp]\n");
-	printf("   -h   print help message\n");
-	printf("   -v   verbose printing enabled\n");
-	printf("   -p   command prompt off\n");
-	exit(1);
-}
-
 
 void systemError(char *msg)
 {
@@ -619,19 +594,10 @@ int lookUp(char x)
 
 void writeFile(char* fileName, char* output) {
 
-	FILE *filePtr;
-	filePtr = fopen(fileName, "w");
+	int fd = open(fileName, O_RDWR | O_CREAT);
 
-	if (filePtr == NULL) {
-	  fprintf(stderr, "Can't write output file %s!\n", fileName);
-	  exit(1);
-	}
-
-	else {
-		fwrite (output , sizeof(output), 1, filePtr);
-		fclose(filePtr);
-	}
-
+	write(fd,output, sizeof(output));
+	close(fd);
 	return;
 
 }
@@ -663,7 +629,7 @@ char* readFile(char* fileName) {
 		fread(fileContents, 1, fileSize, filePtr);
 		fclose(filePtr);
 	}
-
 	return fileContents;
 }
+
 

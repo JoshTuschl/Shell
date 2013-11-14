@@ -14,7 +14,6 @@
 
 /* Misc manifest constants */
 #define MAXLINE    1024   /* max line size */
-#define MAXARGS     128   /* max args on a command line */
 #define MAXPROMPT   128   /* max size of a prompt string */
 
 struct token {
@@ -27,7 +26,6 @@ struct token {
 extern char **environ;      /* defined in libc */
 char prompt[MAXPROMPT];     /* command line prompt */
 int verbose = 0;            /* if true, print additional output */
-char sbuf[MAXLINE];         /* for composing sprintf messages */
 int debug = 0;
 int tokenCount = 0;
 struct token tokenArray[128];
@@ -47,9 +45,7 @@ int lookUp(char);
  */
 int main(int argc, char **argv)
 {
-    char c;
     char cmdline[MAXLINE];
-    int enable_prompt = 1;
 
     strcpy(prompt, "iosh> ");
 

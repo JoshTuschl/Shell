@@ -438,20 +438,20 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					//there is both infile and outfile
 					char out[255];
 					if((pid = fork()) == 0) {
-						if(file = open(tokenArray[infile].tokenData, O_RDWR | O_CREAT) > -1)
+						if((file = open(tokenArray[infile].tokenData, O_RDONLY)) > -1)
 						{
-							int in = dup(0);
+							/*int in = dup(0);
 							dup2(file, 0);
 							fflush(0);
 							close(file);
-							dup2(0, in);
+							dup2(0, in);*/
 						
-							if(file2 = open(tokenArray[outfile].tokenData, O_RDWR | O_CREAT) < 0)
+							if((file2 = open(tokenArray[outfile].tokenData, O_RDWR | O_CREAT, S_IRUSR|S_WUSR)) < 0)
 							{
 								printf("Error opening outfile.");
 								return;
 							}
-							int out = dup(1);
+							//int out = dup(1);
 							dup2(file2, 1);
 							
 							//strcpy(argv[argc], readfile(tokenArray[infile].tokenData));
@@ -597,7 +597,20 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 						if(execve(&argv[0],  (char* const*) &argv, environ) < 0) {
 							printf("%s: Command not found. \n", tokenArray[0].tokenData);
 						}
-					}					
+						else
+						{
+							exit(0); //if successful, execve, then child exits.
+						}
+					}
+					else
+					{
+						int status;
+						waitpid(pid, &status, 0)
+						if(debug == 1)
+						{
+							printf("Child Status = " + status);
+						}
+					}
 				}
 			}
 		}

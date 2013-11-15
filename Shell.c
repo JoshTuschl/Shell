@@ -64,7 +64,7 @@ int main(int argc, char **argv)
 
 		/* Evaluate the command line */
 		scanner(cmdline);
-
+		parser();
 		fflush(stdout);
 		fflush(stdout);
 		if (debug == 1) {
@@ -268,6 +268,11 @@ int scanner(const char* cmdline) {
 ///////////////////////////////////////////////////////////////////////////
 
 void parser () {	//for infile: open file; get file pointer; dup file; pass it to command		//for outfile:  open file.  output to file?
+	int clear;
+	for(clear = 0; clear<tokenCount; clear++)  //reset usage for number of tokens to be used
+	{
+		strcpy(tokenArray[clear].usage, "");
+	}
     int infile;
 	int outfile;
 	//int pipe = 0;
@@ -340,8 +345,10 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				
 				if(strcmp(tokenArray[i].tokenType, "setprompt") == 0)
 				{
+					stcpy(tokenArray[i].usage, "cmd");
+					stcpy(tokenArray[i+1].usage, "arg");
 					//set the prompt
-					strcpy(prompt, tokenArray[i+1].tokenData);
+					strcpy(prompt, tokenArray[i+1].tokenData + ">");
 					return;
 				}
 				else if(strcmp(tokenArray[i].tokenType, "debug") == 0)  //check if token is built-in function debug
@@ -381,27 +388,24 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				}
 				else if(strcmp(tokenArray[i].tokenType, "word") == 0)  //if type is word, determine cmd, arg, or dir
 				{
-					int k;
-					for(k = 0; k<strlen(tokenArray[i].tokenData); k++)
+					if(command == 0) //check if there is command yet (true or false)
 					{
-						if(tokenArray[i].tokenData[k] == '/')
-						//if(S_ISREG(tokenArray[i].tokenData.st_mode))
+						strcpy(tokenArray[i].usage, "cmd");
+						command = 1; //command is true
+					}
+					else
+					{
+						strcpy(tokenArray[i].usage, "arg");
+						int k;
+						for(k = 0; k<strlen(tokenArray[i].tokenData); k++)
 						{
-							strcpy(tokenArray[i].usage, "directory_name");
+							if(tokenArray[i].tokenData[k] == '/')
+							//if(S_ISREG(tokenArray[i].tokenData.st_mode))
+							{
+								strcpy(tokenArray[i].usage, "directory_name");
+							}
 						}
 					}
-					if(strcmp(tokenArray[i].usage, "directory_name") != 0);
-					{
-						if(command == 0)
-						{
-							strcmp(tokenArray[i].usage, "cmd");
-							command = 1;
-						}
-						else
-						{
-							strcmp(tokenArray[i].usage, "arg");
-						}
-					}					
 				}
 				else    //otherwise, there is an error
 				{
@@ -409,11 +413,9 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				}
 			} //end if
 
-			/*int n;
-			for(n=0; n<tokenCount; n++)
-			{
-				printf(tokenArray.Data + " is " + tokenArray.usage + "\n");
-			}*/
+
+			/*------------------------------------------------------------------------*/
+			//Handle commands 
 
 			int pid;
 			char argv[tokenCount-1];
@@ -423,6 +425,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 			int c = 0;
 			char* file;
 			char*file2;
+			
 			//now can execute the function
 			if(infile != -1)  
 			{

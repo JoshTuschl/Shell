@@ -314,7 +314,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 			outfile = meta_char + 1;
 			if(outfile < infile)
 			{
-				executionError("infile direction (<) must come before outfile direction (>)");
+				printf("Infile direction (<) must come before outfile direction (>)");
 			}
 			else
 			{
@@ -341,19 +341,21 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 			}
 			//first check for built-in commands and execute them immediately
 			if(strcmp(tokenArray[i].usage, "") == 0)  //if usage not assigned, check for usage
-			{
-				
+			{	
 				if(strcmp(tokenArray[i].tokenType, "setprompt") == 0)
 				{
-					stcpy(tokenArray[i].usage, "cmd");
-					stcpy(tokenArray[i+1].usage, "arg");
+					strcpy(tokenArray[i].usage, "cmd");
+					command = 1;
+					strcpy(tokenArray[i+1].usage, "arg");
 					//set the prompt
-					strcpy(prompt, tokenArray[i+1].tokenData + ">");
+					strcpy(prompt, tokenArray[i+1].tokenData);
+					strcat(prompt, ">");
 					return;
 				}
 				else if(strcmp(tokenArray[i].tokenType, "debug") == 0)  //check if token is built-in function debug
 				{
 					strcpy(tokenArray[i].usage, "cmd");
+					command = 1;
 					strcpy(tokenArray[i+1].usage, "arg");
 					if(strcmp(tokenArray[i+1].tokenData, "on") == 0)  //check if debug is being turned on
 					{
@@ -372,6 +374,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				else if(strcmp(tokenArray[i].tokenType, "chdir") == 0) //check if token is built-in function change directory
 				{
 					strcpy(tokenArray[i].usage, "cmd");
+					command = 1;
 					strcpy(tokenArray[i+1].usage, "directory_name");
 					//change directory
 					chdir(tokenArray[i+1].tokenData);
@@ -379,6 +382,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				else if(strcmp(tokenArray[i].tokenType, "quit") == 0) //check if token is quit
 				{
 					strcpy(tokenArray[i].usage, "cmd");
+					command = 1;
 					//quit by exiting the shell
 					exit(0);
 				}
@@ -396,20 +400,20 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					else
 					{
 						strcpy(tokenArray[i].usage, "arg");
-						int k;
-						for(k = 0; k<strlen(tokenArray[i].tokenData); k++)
-						{
-							if(tokenArray[i].tokenData[k] == '/')
-							//if(S_ISREG(tokenArray[i].tokenData.st_mode))
-							{
-								strcpy(tokenArray[i].usage, "directory_name");
-							}
-						}
+						//int k;
+						//for(k = 0; k<strlen(tokenArray[i].tokenData); k++)
+						//{
+						//	if(tokenArray[i].tokenData[k] == '/')
+						//	//if(S_ISREG(tokenArray[i].tokenData.st_mode))
+						//	{
+						//		strcpy(tokenArray[i].usage, "directory_name");
+						//	}
+						//}
 					}
 				}
 				else    //otherwise, there is an error
 				{
-					executionError("Parser Error:  Could not determine usage");
+					printf("Parser Error:  Could not determine usage");
 				}
 			} //end if
 
@@ -433,55 +437,97 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				{
 					//there is both infile and outfile
 					char out[255];
-					if(fork() == 0) {
-						file = dup2(infile, 1);
-						strcpy(argv[argc], readfile(tokenArray[infile].tokenData));
-						argc++;
-						for(l=0; l<tokenCount; l++)
+					if((pid = fork()) == 0) {
+						if(file = open(tokenArray[infile].tokenData, O_RDWR | O_CREAT) > -1)
 						{
-							if(strcmp(tokenArray[i].usage, "arg") == 0)
+							int in = dup(0);
+							dup2(file, 0);
+							fflush(0);
+							close(file);
+							dup2(0, in);
+						
+							if(file2 = open(tokenArray[outfile].tokenData, O_RDWR | O_CREAT) < 0)
 							{
-								strcpy(argv[argc], tokenArray[i].tokenData);
-								argc++;
+								printf("Error opening outfile.");
+								return;
 							}
-							else if(strcm(tokenArray[i].usage, "cmd") == 0)
+							int out = dup(1);
+							dup2(file2, 1);
+							
+							//strcpy(argv[argc], readfile(tokenArray[infile].tokenData));
+							//argc++;
+							for(l=0; l<tokenCount; l++)
 							{
-								c = i;
+								if(strcmp(tokenArray[l].usage, "cmd") == 0)
+								{
+									c = l;
+								}
 							}
-							else if(strcmp(tokenArray[l].usage, "outfile") == 0)
+							strcpy(argv[0], tokenArray[c].tokenData);
+							argc++;
+							for(l=0; l<tokenCount; l++)
 							{
-								strcpy(buf, tokenArray[l].tokenData);
+								if(strcmp(tokenArray[l].usage, "arg") == 0)
+								{
+									strcpy(argv[argc], tokenArray[l].tokenData);
+									argc++;
+								}
 							}
+
+							if(execve(tokenArray[c].tokenData, argv, environ) < 0) {
+								printf("%s: Command not found. \n", tokenArray[0].tokenData);
+								close(in);
+								close(file2);
+							}
+							else
+							{
+								fflush(1);
+								close(file2);
+								dup2(out, 1);
+								close(out);
+							}
+							close(in);
 						}
-						if(out = execve(tokenArray[c].tokenData, argv, environ) < 0 )
+						else
 						{
-							printf("%s: Command not found. \n", tokenArray[c].tokenData);
-							exit(0);
+							printf("Error opening infile.");
 						}
-						writeFile(buf, out);
 					}
 				}
 				else    //there is only infile
 				{
 					if((pid = fork()) == 0) {
-						file = dup2(infile, 1);
-
-						strcpy(argv[argc], readfile(tokenArray[infile].tokenData));
-						argc++;
-						for(l=0; l<tokenCount; l++)
+						if(file = open(tokenArray[infile].tokenData, O_RDWR | O_CREAT) > -1)
 						{
-							if(strcmp(tokenArray[i].usage, "arg") == 0)
+							int in = dup(0);
+							dup2(file, 0);
+							fflush(0);
+							close(file);
+							dup2(0, in);
+						
+							//strcpy(argv[argc], readfile(tokenArray[infile].tokenData));
+							//argc++;
+							for(l=0; l<tokenCount; l++)
 							{
-								strcpy(argv[argc], tokenArray[i].tokenData);
-								argc++;
+								if(strcmp(tokenArray[l].usage, "cmd") == 0)
+								{
+									c = l;
+								}
 							}
-							else if(strcmp(tokenArray[i].usage, "cmd") == 0)
+							strcpy(argv[0], tokenArray[c].tokenData);
+							argc++;
+							for(l=0; l<tokenCount; l++)
 							{
-								c = i;
+								if(strcmp(tokenArray[l].usage, "arg") == 0)
+								{
+									strcpy(argv[argc], tokenArray[l].tokenData);
+									argc++;
+								}
 							}
-						}
-						exec(tokenArray[c], argv);
-					}
+							if(execve(tokenArray[c].tokenData, argv, environ) < 0) {
+								printf("%s: Command not found. \n", tokenArray[0].tokenData);
+							}
+							close(in);
 				}
 			}
 			else
@@ -489,36 +535,53 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				if(outfile != -1)
 				{
 					//there is only outfile
-					char buf[128];
 					if((pid = fork()) == 0) {
-						char out[255];
-						for(l=0; l<tokenCount; l++)
+						if(file2 = open(tokenArray[outfile].tokenData, O_RDWR | O_CREAT) > -1)
 						{
-							if(strcmp(tokenArray[l].usage, "arg") == 0)
+							int out = dup(1);		
+							for(l=0; l<tokenCount; l++)
 							{
-								strcpy(argv[argc], tokenArray[l].tokenData);
-								argc++;
+								if(strcmp(tokenArray[l].usage, "cmd") == 0)
+								{
+									c = l;
+								}
 							}
-							else if(strcmp(tokenArray[l].usage, "cmd") == 0)
+							strcpy(argv[0], tokenArray[c].tokenData);
+							argc++;
+							for(l=0; l<tokenCount; l++)
 							{
-								c = i;
+								if(strcmp(tokenArray[l].usage, "arg") == 0)
+								{
+									strcpy(argv[argc], tokenArray[l].tokenData);
+									argc++;
+								}
 							}
-							else if(strcmp(tokenArray[l].usage, "outfile") == 0)
+
+							if(execve(tokenArray[c].tokenData, argv, environ) < 0) {
+								printf("%s: Command not found. \n", tokenArray[0].tokenData);
+								close(file2);
+							}
+							else
 							{
-								strcpy(buf, tokenArray[l].tokenData);
+								fflush(1);
+								close(file2);
+								dup2(out, 1);
+								close(out);
 							}
 						}
-						if(out = execve(tokenArray[c].tokenData, argv, environ) < 0 )
-						{
-							printf("%s: Command not found. \n", tokenArray[c].tokenData);
-							exit(0);
-						}
-						writeFile(buf, out);
-					}
 				}
 				else
 				{
 					//there is not an infile or an outfile
+					for(l=0; l<tokenCount; l++)
+					{
+						if(strcmp(tokenArray[l].usage, "cmd") == 0)
+						{
+							c = l;
+						}
+					}
+					strcpy(argv[0], tokenArray[c].tokenData);
+					argc++;
 					for(l=0; l<tokenCount; l++)
 					{
 						if(strcmp(tokenArray[l].usage, "arg") == 0)
@@ -526,15 +589,10 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 							strcpy(argv[argc], tokenArray[l].tokenData);
 							argc++;
 						}
-						else if(strcmp(tokenArray[l].usage, "cmd") == 0)
-						{
-							c = i;
-						}
 					}
 					if((pid = fork()) == 0) {
-						if(execve(tokenArray[0].tokenData, argv, environ) < 0) {
+						if(execve(tokenArray[c].tokenData, argv, environ) < 0) {
 							printf("%s: Command not found. \n", tokenArray[0].tokenData);
-							exit(0);
 						}
 					}					
 				}
@@ -546,15 +604,15 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 
 ////////////////////////////////////////////////////////////////////
 
-void setPrompt(char* string) {
-	strcpy(prompt, string);
+void setPrompt(char* string) { //pass string to set prompt to
+	strcpy(prompt, string);	//sets prompt to string
 }
 
 void setDebug(int value) {
 	debug = value;
 }
 
-void printTokens() {
+void printTokens() { //for debug
 	int i;
 	for (i = 0; i < tokenCount; i++) {
 		printf("Token is %s \n", (tokenArray[i]).tokenData);
@@ -563,20 +621,20 @@ void printTokens() {
 	}
 }
 
-void systemError(char *msg)
+void systemError(char *msg) //system error prints message to standard out and to standard error and exits shell
 {
 	fprintf(stdout, "%s: %s\n", msg, strerror(errno));
 	exit(1);
 }
 
 
-void executionError(char *msg)
+void executionError(char *msg)  //execution error prints message to standard out and exits shell
 {
 	fprintf(stdout, "%s\n", msg);
 	exit(1);
 }
 
-int lookUp(char x)
+int lookUp(char x)  //pass character to look up or find in tokens
 {
 	int found = -1;
 	int i;
@@ -587,7 +645,7 @@ int lookUp(char x)
 			found = i;
 		}
 	}
-	return found;
+	return found;  //returns index of found token
 }
 
 void writeFile(char* fileName, char* output) {

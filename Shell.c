@@ -427,8 +427,8 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 			char buf[254];
 			int l;
 			int c = 0;
-			char* file;
-			char*file2;
+			int file;
+			int file2;
 			
 			//now can execute the function
 			if(infile != -1)  
@@ -474,7 +474,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 								}
 							}
 
-							if(execve(tokenArray[c].tokenData, argv, environ) < 0) {
+							if(execve(argv[0], argv, environ) < 0) {
 								printf("%s: Command not found. \n", tokenArray[0].tokenData);
 								close(in);
 								close(file2);
@@ -524,7 +524,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 									argc++;
 								}
 							}
-							if(execve(tokenArray[c].tokenData, argv, environ) < 0) {
+							if(execve(arvg[0], argv, environ) < 0) {
 								printf("%s: Command not found. \n", tokenArray[0].tokenData);
 							}
 							close(in);
@@ -557,7 +557,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 								}
 							}
 
-							if(execve(tokenArray[c].tokenData, argv, environ) < 0) {
+							if(execve(argv[0], argv, environ) < 0) {
 								printf("%s: Command not found. \n", tokenArray[0].tokenData);
 								close(file2);
 							}
@@ -582,7 +582,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					}
 					strcpy(argv[0], tokenArray[c].tokenData);
 					argc++;
-					for(l=0; l<tokenCount; l++)
+					for(l; l<tokenCount; l++)
 					{
 						if(strcmp(tokenArray[l].usage, "arg") == 0)
 						{
@@ -591,7 +591,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 						}
 					}
 					if((pid = fork()) == 0) {
-						if(execve(tokenArray[c].tokenData, argv, environ) < 0) {
+						if(execve(argv[0], argv, environ) < 0) {
 							printf("%s: Command not found. \n", tokenArray[0].tokenData);
 						}
 					}					

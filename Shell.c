@@ -446,7 +446,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 							close(file);
 							dup2(0, in);*/
 						
-							if((file2 = open(tokenArray[outfile].tokenData, O_RDWR | O_CREAT, S_IRUSR|S_WUSR)) < 0)
+							if((file2 = open(tokenArray[outfile].tokenData, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR)) < 0)
 							{
 								printf("Error opening outfile.");
 								return;
@@ -476,7 +476,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 
 							if(execve(&argv[0],  (char* const*) &argv, environ) < 0) {
 								printf("%s: Command not found. \n", tokenArray[0].tokenData);
-								close(in);
+								//close(in);
 								close(file2);
 							}
 							else
@@ -486,7 +486,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 //								dup2(out, 1);
 //								close(out);
 							}
-							close(in);
+							//close(in);
 						}
 						else
 						{
@@ -605,10 +605,10 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					else
 					{
 						int status;
-						waitpid(pid, &status, 0)
+						waitpid(pid, &status, 0);
 						if(debug == 1)
 						{
-							printf("Child Status = " + status);
+							printf("Child Status = %d", status);
 						}
 					}
 				}

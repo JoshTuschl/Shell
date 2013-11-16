@@ -468,13 +468,13 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 									c = l;
 								}
 							}
-							strcpy(args[0], tokenArray[c].tokenData);
+							args[0] = &tokenArray[l].tokenData;
 							argCount++;
 							for(l=0; l<tokenCount; l++)
 							{
 								if(strcmp(tokenArray[l].usage, "arg") == 0)
 								{
-									strcpy(args[argCount], tokenArray[l].tokenData);
+									args[argCount] = &tokenArray[l].tokenData;
 									argCount++;
 								}
 							}
@@ -521,13 +521,13 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 								c = l;
 							}
 						}
-						strcpy(args[0], tokenArray[c].tokenData);
+						args[0] = &tokenArray[l].tokenData;
 						argCount++;
 						for(l=0; l<tokenCount; l++)
 						{
 							if(strcmp(tokenArray[l].usage, "arg") == 0)
 							{
-								strcpy(args[argCount], tokenArray[l].tokenData);
+								args[argCount] = &tokenArray[l].tokenData;
 								argCount++;
 							}
 						}
@@ -560,13 +560,13 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 									c = l;
 								}
 							}
-							strcpy(args[0], tokenArray[c].tokenData);
+							args[0] = &tokenArray[l].tokenData;
 							argCount++;
 							for(l=0; l<tokenCount; l++)
 							{
 								if(strcmp(tokenArray[l].usage, "arg") == 0)
 								{
-									strcpy(args[argCount], tokenArray[l].tokenData);
+									args[argCount] = &tokenArray[l].tokenData;
 									argCount++;
 								}
 							}
@@ -595,7 +595,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					{
 						if(strcmp(tokenArray[l].usage, "cmd") == 0)
 						{
-							strcpy(args[0], tokenArray[l].tokenData);
+							args[0] = &tokenArray[l].tokenData;
 						}
 					}
 					argCount++;
@@ -603,7 +603,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					{
 						if(strcmp(tokenArray[l].usage, "arg") == 0)
 						{
-							strcpy(args[argCount], tokenArray[l].tokenData);
+							args[argCount] = &tokenArray[l].tokenData;
 							argCount++;
 						}
 					}

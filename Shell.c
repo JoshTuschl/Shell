@@ -16,6 +16,7 @@
 #define MAXLINE    1024   /* max line size */
 #define MAXPROMPT   128   /* max size of a prompt string */
 
+
 struct token {
 	char tokenData[128];
 	char tokenType[128];
@@ -29,6 +30,7 @@ int verbose = 0;            /* if true, print additional output */
 int debug = 0;
 int tokenCount = 0;
 struct token tokenArray[128];
+int NOTFOUND = 999;
 
 //stubs
 void printTokens();
@@ -273,12 +275,12 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 	{
 		strcpy(tokenArray[clear].usage, "");
 	}
-    int infile = -1;
-	int outfile = -1;
+    int infile = 999;
+	int outfile = 999;
 	//int pipe = 0;
 	int meta_char;
 	int command=0;
-	if(tokenCount < 1)  //check buffer struct is not empty
+	if(tokenCount < 2)  //check buffer struct is not empty
 	{
 		//do nothing
 		return;
@@ -312,17 +314,17 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 		{
 			strcpy(tokenArray[meta_char].usage, "meta");
 			outfile = meta_char + 1;
-			if(outfile < infile)
-			{
-				printf("Infile direction (<) must come before outfile direction (>)");
-			}
-			else
-			{
-				strcpy(tokenArray[outfile].usage, "outfile");
-			}
+				if(outfile < infile)
+				{
+					printf("Infile direction (<) must come before outfile direction (>)");
+				}
+				else
+				{
+					strcpy(tokenArray[outfile].usage, "outfile");
+				}
 		}
-		int i;
-		for(i=0; i<tokenCount; i++)  //check each token
+		int i = 0;//check each token
+		for(i; i < tokenCount; i++)
 		{ 
 			if(strcmp(tokenArray[i].tokenType, "#") == 0)  //check for comment symbol
 			{
@@ -332,12 +334,10 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				{
 					strcpy(tokenArray[j].usage, "comment");
 				}
-				break;
 			}
 			if(strcmp(tokenArray[i].tokenType, "EOL") == 0)
 			{
 				strcpy(tokenArray[i].usage, "EOL");
-				break;
 			}
 			//first check for built-in commands and execute them immediately
 			if(strcmp(tokenArray[i].usage, "") == 0)  //if usage not assigned, check for usage
@@ -361,10 +361,14 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					{
 						//enter debug mode
 						debug = 1;
+						strcpy(tokenArray[i+2].usage, "EOL");
+						return;
 					}
 					else if(strcmp(tokenArray[i+1].tokenData, "off") == 0)   //check if debug is being turned off
 					{	//exit debug mode
 						debug = 0;
+						strcpy(tokenArray[i+2].usage, "EOL");
+						return;
 					}
 					else
 					{
@@ -416,25 +420,26 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					printf("Parser Error:  Could not determine usage");
 				}
 			} //end if
-
+		}
 
 			/*------------------------------------------------------------------------*/
 			//Handle commands 
 
 			int pid;
-			char argv[tokenCount-1];
-			int argc = 0;
-			char buf[254];
+			char* args[tokenCount];
+			int argCount = 0;
+			char buf[255];
 			int l;
 			int c = 0;
 			int file;
 			int file2;
 			
 			//now can execute the function
-			if(infile != -1)  
+			if(infile != NOTFOUND)
 			{
-				if(outfile != -1)
+				if(outfile != NOTFOUND)
 				{
+					printf("both infile and outfile are a lie");
 					//there is both infile and outfile
 					char out[255];
 					if((pid = fork()) == 0) {
@@ -463,18 +468,19 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 									c = l;
 								}
 							}
-							strcpy(&argv[0], tokenArray[c].tokenData);
-							argc++;
+							strcpy(args[0], tokenArray[c].tokenData);
+							argCount++;
 							for(l=0; l<tokenCount; l++)
 							{
 								if(strcmp(tokenArray[l].usage, "arg") == 0)
 								{
-									strcpy(&argv[argc], tokenArray[l].tokenData);
-									argc++;
+									strcpy(args[argCount], tokenArray[l].tokenData);
+									argCount++;
 								}
 							}
 
-							if(execve(&argv[0],  (char* const*) &argv, environ) < 0) {
+							args[argCount] = NULL;
+							if(execvp(args[0], args) < 0) {
 								printf("%s: Command not found. \n", tokenArray[0].tokenData);
 								//close(in);
 								close(file2);
@@ -496,8 +502,9 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				}
 			else    //there is only infile
 			{
+				printf("Zuul disapproves of the infile without outfile");
 				if((pid = fork()) == 0) {
-					if(file = open(tokenArray[infile].tokenData, O_RDWR | O_CREAT) > -1)
+					if(file = open(tokenArray[infile].tokenData, O_RDONLY) > -1)
 					{
 						int in = dup(0);
 						dup2(file, 0);
@@ -514,29 +521,33 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 								c = l;
 							}
 						}
-						strcpy(&argv[0], tokenArray[c].tokenData);
-						argc++;
+						strcpy(args[0], tokenArray[c].tokenData);
+						argCount++;
 						for(l=0; l<tokenCount; l++)
 						{
 							if(strcmp(tokenArray[l].usage, "arg") == 0)
 							{
-								strcpy(&argv[argc], tokenArray[l].tokenData);
-								argc++;
+								strcpy(args[argCount], tokenArray[l].tokenData);
+								argCount++;
 							}
 						}
-						if(execve(&argv[0],  (char* const*) &argv, environ) < 0) {
+						args[argCount] = NULL;
+						if(execvp(args[0], args) < 0) {
 							printf("%s: Command not found. \n", tokenArray[0].tokenData);
 						}
 						close(in);
 
 					}
+					exit(0);
 				}
 			}
 			}
 			else
 			{
-				if(outfile != -1)
+				if(outfile != NOTFOUND)
+
 				{
+					printf("there is only outfile");
 					//there is only outfile
 					if((pid = fork()) == 0) {
 						if(file2 = open(tokenArray[outfile].tokenData, O_RDWR | O_CREAT) > -1)
@@ -549,18 +560,18 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 									c = l;
 								}
 							}
-							strcpy(&argv[0], tokenArray[c].tokenData);
-							argc++;
+							strcpy(args[0], tokenArray[c].tokenData);
+							argCount++;
 							for(l=0; l<tokenCount; l++)
 							{
 								if(strcmp(tokenArray[l].usage, "arg") == 0)
 								{
-									strcpy(&argv[argc], tokenArray[l].tokenData);
-									argc++;
+									strcpy(args[argCount], tokenArray[l].tokenData);
+									argCount++;
 								}
 							}
-
-							if(execve(&argv[0],  (char* const*) &argv, environ) < 0) {
+							args[argCount] = NULL;
+							if(execvp(args[0], args) < 0) {
 								printf("%s: Command not found. \n", tokenArray[0].tokenData);
 								close(file2);
 							}
@@ -570,35 +581,43 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 //								close(file2);
 //								dup2(out, 1);
 //								close(out);
+								exit(1); // child exits
 							}
 						}
+						exit(1);
+					}
 				}
 				else
 				{
+					printf("no outfile or infile\n");
 					//there is not an infile or an outfile
 					for(l=0; l<tokenCount; l++)
 					{
 						if(strcmp(tokenArray[l].usage, "cmd") == 0)
 						{
-							c = l;
+							strcpy(args[0], tokenArray[l].tokenData);
 						}
 					}
-					strcpy(&argv[0], tokenArray[c].tokenData);
-					argc++;
-					for(l; l<tokenCount; l++)
+					argCount++;
+					for(l=0; l<tokenCount; l++)
 					{
 						if(strcmp(tokenArray[l].usage, "arg") == 0)
 						{
-							strcpy(&argv[argc], tokenArray[l].tokenData);
-							argc++;
+							strcpy(args[argCount], tokenArray[l].tokenData);
+							argCount++;
 						}
 					}
+
 					if((pid = fork()) == 0) {
-						if(execve(&argv[0],  (char* const*) &argv, environ) < 0) {
-							printf("%s: Command not found. \n", tokenArray[0].tokenData);
+						args[argCount] = NULL;
+						if(execvp(args[0], args) < 0) {
+								printf("fork didn't work, argument was %s \n", args[0]);
+								systemError("FAIL");
+								exit(0);
 						}
 						else
 						{
+							printf("Command executed.");
 							exit(0); //if successful, execve, then child exits.
 						}
 					}
@@ -613,9 +632,9 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					}
 				}
 			}
-		}
+
 	}
-	}
+
 
 	return;
 }

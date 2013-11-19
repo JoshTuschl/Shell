@@ -1,0 +1,6 @@
+This is an io shell for Unix platform called iosh.  It uses a struct to handle input from commandline, pulled into main, and then sent to the scanner.  The scanner then splits the input on white space, meta characters, or quotes and determines if it is a word, string, built in commands, or end of file (EOF).  When it returns to main, the parser is then called which takes the struct and determines usage.  If it finds
+built in commands, the parser executes them immediately.  Otherwise, it determines commands and arguments and then calls fork and exec. This shell supports basic file redirection and calls to other Unix commands.
+
+Limitations: Was not designed to support piping.  
+
+Special features:	Treats cd like chdir (like in Unix). Exit and quit both exit the shell.

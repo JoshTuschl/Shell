@@ -1,14 +1,17 @@
 //#include <ctype.h>
 //#include <errno.h>
-#include <getopt.h>
-//#include <signal.h>
-#include <stdio.h>
+
 #include <fcntl.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+//#include <sys/_default_fcntl.h>
 #include <sys/errno.h>
-//#include <sys/types.h>
+//#include <sys/reent.h>
+#include <sys/stat.h>
 #include <sys/unistd.h>
+#include <sys/wait.h>
+
 //#include <sys/wait.h>
 //#include <unistd.h>
 
@@ -36,8 +39,6 @@ int NOTFOUND = 999;
 void printTokens();
 void systemError(char*);
 void executionError(char*);
-void writeFile(char*, char*);
-char* readFile(char*);
 int lookUp(char);
 void parser();
 
@@ -91,7 +92,7 @@ int scanner(const char* cmdline) {
 			if (strlen(tokenData) > 0) {
 				strcat(tokenData, "\0");
 				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
-				if (!strcmp(tokenData,"quit")){
+				if (!strcmp(tokenData,"quit") || !strcmp(tokenData,"exit")){
 					strcpy(tokenArray[tokenCount].tokenType,"quit");
 				}
 				else if (!strcmp(tokenData,"debug")) {
@@ -110,11 +111,11 @@ int scanner(const char* cmdline) {
 				tokenCount++;
 			}
 		}
-		else if (cmdline[i] == '<') {
+		else if (cmdline[i] == '<' || cmdline[i] == '>' || cmdline[i] == '#') {
 			if (strlen(tokenData) > 0) {
 				strcat(tokenData, "\0");
 				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
-				if (!strcmp(tokenData,"quit")){
+				if (!strcmp(tokenData,"quit") || !strcmp(tokenData,"exit")){
 					strcpy(tokenArray[tokenCount].tokenType,"quit");
 				}
 				else if (!strcmp(tokenData,"debug")) {
@@ -132,74 +133,17 @@ int scanner(const char* cmdline) {
 				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
-			strcat(tokenData, "<\0");
+			strcat(tokenData, &cmdline[i]);
 			memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
 			strcpy(tokenArray[tokenCount].tokenType,"meta");
 			memset(tokenData, 0, sizeof(tokenData));
 			tokenCount++;
-		}
-		else if (cmdline[i] == '>') {
-			if (strlen(tokenData) > 0) {
-				strcat(tokenData, "\0");
-				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
-				if (!strcmp(tokenData,"quit")){
-					strcpy(tokenArray[tokenCount].tokenType,"quit");
-				}
-				else if (!strcmp(tokenData,"debug")) {
-					strcpy(tokenArray[tokenCount].tokenType,"debug");
-				}
-				else if (!strcmp(tokenData,"chdir") || !strcmp(tokenData,"cd")) {
-					strcpy(tokenArray[tokenCount].tokenType,"chdir");
-				}
-				else if (!strcmp(tokenData,"setprompt")) {
-					strcpy(tokenArray[tokenCount].tokenType,"setprompt");
-				}
-				else {
-					strcpy(tokenArray[tokenCount].tokenType,"word");
-				}
-				memset(tokenData, 0, sizeof(tokenData));
-				tokenCount++;
-			}
-			strcat(tokenData, ">\0");
-			memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
-			strcpy(tokenArray[tokenCount].tokenType,"meta");
-			memset(tokenData, 0, sizeof(tokenData));
-			tokenCount++;
-		}
-		else if (cmdline[i] == '#') {
-			if (strlen(tokenData) > 0) {
-				strcat(tokenData, "\0");
-				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
-				if (!strcmp(tokenData,"quit")){
-					strcpy(tokenArray[tokenCount].tokenType,"quit");
-				}
-				else if (!strcmp(tokenData,"debug")) {
-					strcpy(tokenArray[tokenCount].tokenType,"debug");
-				}
-				else if (!strcmp(tokenData,"chdir") || !strcmp(tokenData, "cd")) {
-					strcpy(tokenArray[tokenCount].tokenType,"chdir");
-				}
-				else if (!strcmp(tokenData,"setprompt")) {
-					strcpy(tokenArray[tokenCount].tokenType,"setprompt");
-				}
-				else {
-					strcpy(tokenArray[tokenCount].tokenType,"word");
-				}
-				memset(tokenData, 0, sizeof(tokenData));
-				tokenCount++;
-			}
-			strcat(tokenData, "#\0");
-			memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
-			strcpy(tokenArray[tokenCount].tokenType,"meta");
-			memset(tokenData, 0, sizeof(tokenData));
-			tokenCount++;
-
 		}
 		else if (cmdline[i] == '"') {
 			tokenData[0] = cmdline[i+1];
 			i++;
 			i++;
-			while (cmdline[i] != '"') {
+			while (cmdline[i] != '"' && cmdline[i] != '\n') {
 				int index = strlen(tokenData);
 				tokenData[index] = cmdline[i];
 				i++;
@@ -210,7 +154,7 @@ int scanner(const char* cmdline) {
 			tokenCount++;
 		}
 		else if (cmdline[i] == '\n') {
-			if (!strcmp(tokenData,"quit")){
+			if (!strcmp(tokenData,"quit") || !strcmp(tokenData,"exit")){
 				strcat(tokenData, "\0");
 				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
 				//tokenArray[tokenCount].tokenData = tokenData;
@@ -225,7 +169,7 @@ int scanner(const char* cmdline) {
 				memset(tokenData, 0, sizeof(tokenData));
 				tokenCount++;
 			}
-			else if (!strcmp(tokenData,"chdir")) {
+			else if (!strcmp(tokenData,"chdir")|| !strcmp(tokenData,"cd")) {
 				strcat(tokenData, "\0");
 				memcpy(tokenArray[tokenCount].tokenData, tokenData, sizeof(tokenData));
 				strcpy(tokenArray[tokenCount].tokenType,"chdir");
@@ -277,29 +221,11 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 	}
     int infile = 999;
 	int outfile = 999;
-	//int pipe = 0;
 	int meta_char;
 	int command=0;
-	if(tokenCount < 2)  //check buffer struct is not empty
+	if(tokenCount > 1) //check buffer struct is not empty
 	{
-		//do nothing
-		return;
-	}
-	else
-	{   //check for piping
-		/*meta_char = lookup('|');  
-		if(meta_char != -1)
-		{
-			//then there is more than one command
-			pipe = 2;
-		}
-		else
-		{
-			//there is only one command
-			pipe = 1;
-		}*/
-
-		//check for infile
+	    //check for infile
 		meta_char = lookUp('<');
 		if(meta_char != -1)
 		{
@@ -314,19 +240,19 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 		{
 			strcpy(tokenArray[meta_char].usage, "meta");
 			outfile = meta_char + 1;
-				if(outfile < infile && infile != 999)
-				{
-					printf("Infile direction (<) must come before outfile direction (>)\n");
-				}
-				else
-				{
-					strcpy(tokenArray[outfile].usage, "outfile");
-				}
+			if(outfile < infile && infile != 999)
+			{
+				printf("Infile direction (<) must come before outfile direction (>)\n");
+			}
+			else
+			{
+				strcpy(tokenArray[outfile].usage, "outfile");
+			}
 		}
 		int i = 0;//check each token
 		for(i; i < tokenCount; i++)
 		{ 
-			if(strcmp(tokenArray[i].tokenData, "#") == 0)  //check for comment symbol
+			if(tokenArray[i].tokenData[0] == '#')  //check for comment symbol
 			{
 				strcpy(tokenArray[i].usage, "meta");
 				int j;
@@ -373,6 +299,7 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					else
 					{
 						executionError("Invalid argument for debug cmd.");
+						return;
 					}
 				}
 				else if(strcmp(tokenArray[i].tokenType, "chdir") == 0) //check if token is built-in function change directory
@@ -381,11 +308,17 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 					command = 1;
 					strcpy(tokenArray[i+1].usage, "directory_name");
 					//change directory
-					char* ptr = &tokenArray[i+1].tokenData;
-					chdir(ptr);
-					printf("Directory changed to %s\n", tokenArray[i+1].tokenData);
-					return;
-
+					char* ptr = tokenArray[i+1].tokenData;
+					if (chdir(ptr) > -1)
+					{
+						printf("Directory changed to %s\n", tokenArray[i+1].tokenData);
+						return;
+					}
+					else
+					{
+						fprintf(stdout, "%s: %s\n", "Directory change failed", strerror(errno));
+						return;
+					}
 				}
 				else if(strcmp(tokenArray[i].tokenType, "quit") == 0) //check if token is quit
 				{
@@ -414,210 +347,86 @@ void parser () {	//for infile: open file; get file pointer; dup file; pass it to
 				{
 					printf("Parser Error:  Could not determine usage\n");
 				}
-			} //end if
+			} //end if(strcmp(tokenArray[i].usage, "") == 0)
+		}//end for(i; i < tokenCount; i++)
+
+		/*------------------------------------------------------------------------*/
+		//Handle commands
+
+		int pid;
+		char* args[tokenCount];
+		int argCount = 0;
+		int l;
+		int file;
+		int file2;
+
+		//Build arguments array for exec call
+		for(l=0; l<tokenCount; l++)
+		{
+			//search for command and add to start of array
+			if(strcmp(tokenArray[l].usage, "cmd") == 0)
+			{
+				args[0] = tokenArray[l].tokenData;
+			}
 		}
-
-			/*------------------------------------------------------------------------*/
-			//Handle commands 
-
-			int pid;
-			char* args[tokenCount];
-			int argCount = 0;
-			char buf[255];
-			int l;
-			int c = 0;
-			int file;
-			int file2;
-			
-			//now can execute the function
-			if(infile != NOTFOUND)
+		argCount++;
+		for(l=0; l<tokenCount; l++)
+		{
+			//add arguments
+			if(strcmp(tokenArray[l].usage, "arg") == 0)
 			{
-				if(outfile != NOTFOUND)
-				{
-					//there is both infile and outfile
-					char out[255];
-					if((pid = fork()) == 0) {
-						if((file = open(tokenArray[infile].tokenData, O_RDONLY)) > -1)
-						{
-
-							dup2(file, 0);
-							close(file);
-						
-							if((file2 = open(tokenArray[outfile].tokenData, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR)) < 0)
-							{
-								printf("Error opening outfile.\n");
-								return;
-							}
-							dup2(file2, 1);
-							close(file2);
-							
-							//strcpy(argv[argc], readfile(tokenArray[infile].tokenData));
-							//argc++;
-							for(l=0; l<tokenCount; l++)
-							{
-								if(strcmp(tokenArray[l].usage, "cmd") == 0)
-								{
-									c = l;
-								}
-							}
-							args[0] = &tokenArray[l].tokenData;
-							argCount++;
-							for(l=0; l<tokenCount; l++)
-							{
-								if(strcmp(tokenArray[l].usage, "arg") == 0)
-								{
-									args[argCount] = &tokenArray[l].tokenData;
-									argCount++;
-								}
-							}
-
-							args[argCount] = NULL;
-							if(execvp(args[0], args) < 0) {
-								printf("%s: Command not found. \n", tokenArray[0].tokenData);
-
-							}
-							else
-							{
-								exit(0);
-							}
-
-						}
-						else
-						{
-							printf("Error opening infile.\n");
-						}
-					exit(0);
-					}
-				}
-			else    //there is only infile
-			{
-				if((pid = fork()) == 0) {
-					if(file = open(tokenArray[infile].tokenData, O_RDONLY) > -1)
-					{
-						dup2(file, 0);
-						close(file);
-
-						//strcpy(argv[argc], readfile(tokenArray[infile].tokenData));
-						//argc++;
-						for(l=0; l<tokenCount; l++)
-						{
-							if(strcmp(tokenArray[l].usage, "cmd") == 0)
-							{
-								c = l;
-							}
-						}
-						args[0] = &tokenArray[l].tokenData;
-						argCount++;
-						for(l=0; l<tokenCount; l++)
-						{
-							if(strcmp(tokenArray[l].usage, "arg") == 0)
-							{
-								args[argCount] = &tokenArray[l].tokenData;
-								argCount++;
-							}
-						}
-						args[argCount] = NULL;
-						if(execvp(args[0], args) < 0) {
-							printf("%s: Command not found. \n", tokenArray[0].tokenData);
-						}
-
-
-					}
-					exit(0);
-				}
+				args[argCount] = tokenArray[l].tokenData;
+				argCount++;
 			}
-			}
-			else
+		}
+		//add terminator to array
+		args[argCount] = NULL;
+
+		//now can execute the function
+		if((pid = fork()) == 0)
+		{
+			if (infile < NOTFOUND)
 			{
-				if(outfile != NOTFOUND)
-
+				if((file = open(tokenArray[infile].tokenData, O_RDONLY)) > -1)
 				{
-					//there is only outfile
-					if((pid = fork()) == 0) {
-						if(file2 = open(tokenArray[outfile].tokenData,O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR) > -1)
-						{
-							dup2(file2, 1);
-							close(file2);
-							for(l=0; l<tokenCount; l++)
-							{
-								if(strcmp(tokenArray[l].usage, "cmd") == 0)
-								{
-									c = l;
-								}
-							}
-							args[0] = &tokenArray[l].tokenData;
-							argCount++;
-							for(l=0; l<tokenCount; l++)
-							{
-								if(strcmp(tokenArray[l].usage, "arg") == 0)
-								{
-									args[argCount] = &tokenArray[l].tokenData;
-									argCount++;
-								}
-							}
-							args[argCount] = NULL;
-							if(execvp(args[0], args) < 0) {
-								printf("%s: Command not found. \n", tokenArray[0].tokenData);
-							}
-							else
-							{
-
-								exit(1); // child exits
-							}
-						}
-						exit(1);
-					}
+					dup2(file, 0);
 				}
 				else
 				{
-					//there is not an infile or an outfile
-					for(l=0; l<tokenCount; l++)
-					{
-						if(strcmp(tokenArray[l].usage, "cmd") == 0)
-						{
-							args[0] = &tokenArray[l].tokenData;
-						}
-					}
-					argCount++;
-					for(l=0; l<tokenCount; l++)
-					{
-						if(strcmp(tokenArray[l].usage, "arg") == 0)
-						{
-							args[argCount] = &tokenArray[l].tokenData;
-							argCount++;
-						}
-					}
-
-					if((pid = fork()) == 0) {
-						args[argCount] = NULL;
-						if(execvp(args[0], args) < 0) {
-								printf("fork didn't work, argument was %s \n", args[0]);
-								systemError("FAIL");
-								exit(0);
-						}
-						else
-						{
-							printf("Command executed.\n");
-							exit(0); //if successful, execve, then child exits.
-						}
-					}
-					else
-					{
-						int status;
-						waitpid(pid, &status, 0);
-						if(debug == 1)
-						{
-							printf("Child Status = %d\n", status);
-						}
-					}
+					systemError("Failure");
 				}
 			}
 
-	}
+			if (outfile < NOTFOUND)
+			{
+				if((file2 = open(tokenArray[outfile].tokenData, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR)) > -1)
+				{
+					dup2(file2, 1);
+				}
+				else
+				{
+					systemError("Failure");
+				}
+			}
 
-
+			if(execvp(args[0], args) < 0)
+			{
+				systemError("Failure");
+			}
+			else
+			{
+				//should exec before getting here
+				exit(1);
+			}
+		} //if((pid = fork()) == 0)
+		else
+		{
+			int status;
+			waitpid(pid, &status, 0);
+		}
+	} //if(tokenCount > 1)
 	return;
-}
+} // end of function
 
 ////////////////////////////////////////////////////////////////////
 
@@ -665,44 +474,6 @@ int lookUp(char x)  //pass character to look up or find in tokens
 	return found;  //returns index of found token
 }
 
-void writeFile(char* fileName, char* output) {
 
-	int fd = open(fileName, O_RDWR | O_CREAT);
-
-	write(fd,output, sizeof(output));
-	close(fd);
-	return;
-
-}
-
-char* readFile(char* fileName) {
-	char* fileContents;
-
-	FILE *filePtr;
-	int fileSize;
-	filePtr = fopen(fileName, "r");
-
-	if (filePtr == NULL) {
-	  fprintf(stderr, "Can't open input file %s!\n", fileName);
-	  exit(1);
-	}
-
-	//file is good
-	else {
-		//read to end of file
-		fseek(filePtr, 0, SEEK_END);
-		//find length of file
-		fileSize = ftell(filePtr);
-		//move file pointer back to beginning
-		rewind(filePtr);
-
-		//allocate new char *
-		fileContents = (char*) malloc(sizeof(char) * fileSize);
-		//read contents of file
-		fread(fileContents, 1, fileSize, filePtr);
-		fclose(filePtr);
-	}
-	return fileContents;
-}
 
 
